@@ -8,10 +8,10 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-const PORT = 5000;
-const MONGO_URI = "mongodb://127.0.0.1:27017/credit_risk_db";
+const PORT = process.env.PORT || 5000;
+const MONGO_URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/credit_risk_db";
 
-const PYTHON_API_URL = "http://127.0.0.1:5001/predict";
+const PYTHON_API_URL = process.env.ML_SERVICE_URL || "http://127.0.0.1:5001/predict";
 
 mongoose
   .connect(MONGO_URI)
