@@ -5,7 +5,7 @@ from flask_cors import CORS
 import pandas as pd
 
 app = Flask(__name__)
-# Configure CORS with explicit allowed origins instead of allowing all.
+# Configure CORS for the /predict endpoint with explicit allowed origins.
 # ALLOWED_ORIGINS can be set as a comma-separated list in the environment,
 # e.g.: ALLOWED_ORIGINS="https://my-frontend.com,https://admin.my-frontend.com"
 allowed_origins_env = os.environ.get(
