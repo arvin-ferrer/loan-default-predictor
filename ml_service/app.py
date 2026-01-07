@@ -5,7 +5,15 @@ from flask_cors import CORS
 import pandas as pd
 
 app = Flask(__name__)
-CORS(app)
+# Configure CORS for the /predict endpoint with explicit allowed origins.
+# ALLOWED_ORIGINS can be set as a comma-separated list in the environment,
+# e.g.: ALLOWED_ORIGINS="https://my-frontend.com,https://admin.my-frontend.com"
+allowed_origins_env = os.environ.get(
+    "ALLOWED_ORIGINS",
+    "http://localhost:3000,http://127.0.0.1:3000"
+)
+ALLOWED_ORIGINS = [origin.strip() for origin in allowed_origins_env.split(",") if origin.strip()]
+CORS(app, resources={r"/predict": {"origins": ALLOWED_ORIGINS}})
 
 # 1. Load the Model
 model_path = 'model/creditRiskModel_deploy.pkl' 
@@ -61,4 +69,5 @@ def predict():
         return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
-    app.run(port=5000, debug=True)
+    debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() in ('1', 'true', 'yes', 'on')
+    app.run(port=5000, debug=debug_mode)

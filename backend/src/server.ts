@@ -8,10 +8,11 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-const PORT = 5000;
-const MONGO_URI = "mongodb://127.0.0.1:27017/credit_risk_db";
+const PORT = Number(process.env.PORT) || 5000;
+const MONGO_URI =
+  process.env.MONGO_URI || "mongodb://127.0.0.1:27017/credit_risk_db";
 
-const PYTHON_API_URL = "http://127.0.0.1:5001/predict";
+const PYTHON_API_URL = "http://127.0.0.1:5000/predict";
 
 mongoose
   .connect(MONGO_URI)
@@ -30,6 +31,34 @@ app.post(
   async (req: Request<{}, {}, ApplyRequest>, res: Response) => {
     try {
       const { applicantName, ...loanData } = req.body;
+
+      // Validate required fields
+      if (!applicantName || typeof applicantName !== "string") {
+        return res.status(400).json({
+          error: "Invalid loan application data",
+          details: "applicantName is required and must be a string",
+        });
+      }
+
+      const requiredFields = [
+        "int_rate",
+        "dti",
+        "annual_inc",
+        "term",
+        "mo_sin_old_rev_tl_op",
+        "bc_open_to_buy",
+        "avg_cur_bal",
+        "installment",
+      ];
+
+      for (const field of requiredFields) {
+        if (!(field in loanData) || typeof loanData[field as keyof ILoanInputs] !== "number") {
+          return res.status(400).json({
+            error: "Invalid loan application data",
+            details: `${field} is required and must be a number`,
+          });
+        }
+      }
 
       console.log(`1. Processing application for: ${applicantName}`);
 
@@ -54,8 +83,28 @@ app.post(
         result: prediction,
       });
     } catch (error: any) {
-      console.error("Error:", error.message);
-      res.status(500).json({ error: "Failed to process application" });
+      console.error("Error processing application:", error);
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status ?? 502;
+        return res.status(status).json({
+          error: "ML service error while processing application",
+          details: error.message,
+        });
+      }
+
+      if (error instanceof mongoose.Error) {
+        if (error.name === "ValidationError") {
+          return res.status(400).json({
+            error: "Invalid loan application data",
+            details: error.message,
+          });
+        }
+        return res.status(500).json({
+          error: "Database error while processing application",
+        });
+      }
+
+      return res.status(500).json({ error: "Failed to process application" });
     }
   },
 );
