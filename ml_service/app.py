@@ -27,7 +27,10 @@ def predict():
     
     try:
         data = request.get_json()
-        
+
+        if not data or not isinstance(data, dict):
+            return jsonify({'error': 'Invalid or missing JSON body'}), 400
+
         # --- FIX: FORCE COLUMN ORDER ---
         # This list must match the EXACT order from your notebook training step
         expected_columns = [
@@ -40,7 +43,18 @@ def predict():
             'avg_cur_bal',
             'installment'
         ]
-        
+
+        missing_fields = [col for col in expected_columns if col not in data]
+        if missing_fields:
+            return jsonify({'error': f'Missing required fields: {missing_fields}'}), 400
+
+        invalid_fields = [
+            col for col in expected_columns
+            if not isinstance(data[col], (int, float))
+        ]
+        if invalid_fields:
+            return jsonify({'error': f'Fields must be numeric: {invalid_fields}'}), 400
+
         # Convert to DataFrame and reindex to ensure strict order
         features_df = pd.DataFrame([data])
         features_df = features_df[expected_columns]
@@ -61,4 +75,6 @@ def predict():
         return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
-    app.run(port=5000, debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    debug = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
+    app.run(host='0.0.0.0', port=port, debug=debug)

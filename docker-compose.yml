@@ -1,0 +1,47 @@
+services:
+  # Frontend Service (React + Vite + Nginx)
+  frontend:
+    build: 
+      context: ./frontend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    depends_on:
+      - backend
+    restart: always
+
+  # Backend Service (Node.js + Express)
+  backend:
+    build: 
+      context: ./backend
+    ports:
+      - "${BACKEND_PORT:-5000}:5000"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/credit_risk_db
+      - ML_SERVICE_URL=http://ml_service:5000/predict
+      - PORT=5000
+    depends_on:
+      - mongo
+      - ml_service
+    restart: always
+
+  # ML Service (Python + Flask)
+  ml_service:
+    build: 
+      context: ./ml_service
+    ports:
+      - "${ML_SERVICE_PORT:-5001}:5000"
+    environment:
+      - PORT=5000
+    restart: always
+
+  # Database (MongoDB)
+  mongo:
+    image: mongo:latest
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: always
+
+volumes:
+  mongo_data:
